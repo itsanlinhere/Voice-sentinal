@@ -1,0 +1,6 @@
+{
+  "name": "Voice Sentinel",
+  "description": "AI-Generated Voice Detection System - Real Acoustic Feature Extraction & Machine Learning Classification",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}VOICE SENTINEL - Model Training Pipeline{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h2 style="font-size: 1.6rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.02em;">Model Training Pipeline</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Extracts 88 acoustic features across the dataset, applies speaker-independent partitioning, fits StandardScaler + RandomForest, and evaluates generalization.</p>
+  </div>
+  <div>
+    <form action="/train-model" method="POST" onsubmit="handleTrainSubmit()">
+      <button type="submit" id="btnRunTrain" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span id="trainBtnText">Execute Model Training</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Dataset Pre-Training Readiness Card -->
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Dataset Partitioning & Training Inputs
+    </div>
+    <a href="/dataset" style="font-size: 0.8rem; color: var(--accent-cyan); text-decoration: none;">View Full Dataset Explorer &rarr;</a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Total Valid Recordings</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: #FFFFFF; margin-top: 0.25rem;">{{ dataset.total_valid_recordings }}</div>
+    </div>
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Human Audio Clips</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: var(--color-human); margin-top: 0.25rem;">{{ dataset.human_recordings }}</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">{{ dataset.human_speakers_count }} distinct speakers</div>
+    </div>
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">AI Synthetic Clips</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: var(--color-ai); margin-top: 0.25rem;">{{ dataset.ai_recordings }}</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">{{ dataset.ai_engines_count }} acoustic engines</div>
+    </div>
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Class Balance Ratio</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: {% if dataset.is_balanced %}var(--color-human){% else %}var(--color-warning){% endif %}; margin-top: 0.25rem;">
+        {{ dataset.class_balance_ratio }}
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+        {% if dataset.is_balanced %}Balanced (1:1 target){% else %}Class Imbalance Detected{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Small dataset or leakage warnings if applicable -->
+  {% if metadata and metadata.warning %}
+  <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.82rem; color: #FCD34D; margin-bottom: 1rem;">
+    <strong>Methodology Notice:</strong> {{ metadata.warning }}
+  </div>
+  {% endif %}
+
+  <!-- Data Leakage Mitigation Notice -->
+  <div style="background: #0B1120; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
+    <strong style="color: var(--text-main);">Speaker-Independent Partitioning Protocol:</strong>
+    To prevent data leakage, recordings from holdout human speaker <code>{{ dataset.human_speakers[-1] if dataset.human_speakers else 'speaker_03' }}</code> and holdout AI engine <code>{{ dataset.ai_engines[-1] if dataset.ai_engines else 'engine_03' }}</code> are strictly partitioned into the test split. The classifier is never tested on audio from the same voice identity it learned in the training set.
+  </div>
+</div>
+
+<!-- Current Operational Model Metrics -->
+{% if metadata and metadata.status == 'TRAINED' %}
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-human)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Trained Model Performance (Test Partition)
+    </div>
+    <div style="font-size: 0.8rem; color: var(--text-dim);">
+      Trained: <code>{{ metadata.training_timestamp }}</code>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Holdout Test Accuracy</div>
+      <div style="font-size: 1.8rem; font-weight: 800; color: var(--color-human); margin-top: 0.25rem;">
+        {{ metadata.metrics.accuracy_pct }}%
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Evaluated on {{ metadata.test_samples_count }} test clips</div>
+    </div>
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Precision (AI Class)</div>
+      <div style="font-size: 1.8rem; font-weight: 800; color: #FFFFFF; margin-top: 0.25rem;">
+        {{ metadata.metrics.precision_pct }}%
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Low false positive rate</div>
+    </div>
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Recall (AI Class)</div>
+      <div style="font-size: 1.8rem; font-weight: 800; color: #FFFFFF; margin-top: 0.25rem;">
+        {{ metadata.metrics.recall_pct }}%
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Synthetic voice capture rate</div>
+    </div>
+    <div class="feature-box">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">F1-Score</div>
+      <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-cyan); margin-top: 0.25rem;">
+        {{ metadata.metrics.f1_score_pct }}%
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Harmonic mean precision/recall</div>
+    </div>
+  </div>
+
+  <!-- Test Partition Breakdown -->
+  <div style="background: #0B1120; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; font-size: 0.82rem;">
+    <div>
+      <span style="color: var(--text-dim);">Training Split:</span>
+      <strong style="color: #FFFFFF;">{{ metadata.train_samples_count }} samples</strong>
+      <span style="color: var(--text-muted);">({{ metadata.train_human_count }} Human, {{ metadata.train_ai_count }} AI)</span>
+    </div>
+    <div>
+      <span style="color: var(--text-dim);">Testing Split:</span>
+      <strong style="color: #FFFFFF;">{{ metadata.test_samples_count }} samples</strong>
+      <span style="color: var(--text-muted);">({{ metadata.test_human_count }} Human, {{ metadata.test_ai_count }} AI)</span>
+    </div>
+    <div>
+      <span style="color: var(--text-dim);">Acoustic Dimensions:</span>
+      <strong style="color: var(--accent-cyan);">{{ metadata.feature_count }} features</strong>
+    </div>
+  </div>
+
+  <!-- Top 10 Gini Feature Importances -->
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Top Trained Feature Importances (Computed via RandomForest Gini)
+    </div>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Acoustic Marker</th>
+          <th>Relative Importance %</th>
+          <th>Gini Importance Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for feat in metadata.top_features[:8] %}
+        <tr>
+          <td>#{{ feat.rank }}</td>
+          <td><code>{{ feat.name }}</code></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 100px; height: 6px; background: #1E293B; border-radius: 3px; overflow: hidden;">
+                <div style="height: 100%; width: {{ feat.percentage * 3.5 }}%; background: var(--accent-cyan);"></div>
+              </div>
+              <strong style="color: var(--accent-cyan);">{{ feat.percentage }}%</strong>
+            </div>
+          </td>
+          <td><code>{{ feat.importance }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="sentinel-card" style="text-align: center; padding: 3rem 1.5rem;">
+  <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </div>
+  <h3 style="font-size: 1.2rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.5rem;">Model Not Trained Yet</h3>
+  <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 520px; margin: 0 auto 1.5rem;">
+    Click the "Execute Model Training" button above to scan all audio recordings, compute acoustic features, and train the RandomForest classifier.
+  </p>
+</div>
+{% endif %}
+
+<!-- Full Training Details & Educational Pipeline Notice -->
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Training Architecture & Design Principles
+    </div>
+  </div>
+
+  <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+    <p style="margin-bottom: 0.75rem;">
+      &bull; <strong>No Hard-Coded Rules:</strong> Predictions do not rely on static thresholds (such as "if jitter &gt; X, it's AI"). The Random Forest constructs non-linear decision trees evaluating multivariate interactions between pitch micro-perturbation, spectral contrast, and formant envelope stability.
+    </p>
+    <p style="margin-bottom: 0.75rem;">
+      &bull; <strong>Class Balancing:</strong> The model uses <code>class_weight='balanced'</code> to penalize mistakes proportionally when human and synthetic classes differ in size.
+    </p>
+    <p>
+      &bull; <strong>Artifact Persistence:</strong> Trained models and scalers are saved as serialized binaries in <code>models/voice_detector.pkl</code> and <code>models/scaler.pkl</code> alongside feature name registries for deterministic inference.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function handleTrainSubmit() {
+    const btn = document.getElementById('btnRunTrain');
+    const text = document.getElementById('trainBtnText');
+    if (btn) btn.disabled = true;
+    if (text) text.innerText = 'Extracting Features & Training Model... (Please wait 15-30s)';
+  }
+</script>
+{% endblock %}

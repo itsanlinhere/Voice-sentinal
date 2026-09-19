@@ -1,0 +1,179 @@
+{
+  "status": "TRAINED",
+  "training_timestamp": "2026-09-19T06:48:55.825319Z",
+  "classifier_name": "RandomForestClassifier(n_estimators=100, class_weight='balanced')",
+  "feature_count": 88,
+  "total_dataset_samples": 30,
+  "total_human_samples": 15,
+  "total_ai_samples": 15,
+  "speakers_count": 3,
+  "engines_count": 3,
+  "speakers_list": [
+    "speaker_01",
+    "speaker_02",
+    "speaker_03"
+  ],
+  "engines_list": [
+    "engine_01",
+    "engine_02",
+    "engine_03"
+  ],
+  "train_samples_count": 20,
+  "test_samples_count": 10,
+  "train_human_count": 10,
+  "train_ai_count": 10,
+  "test_human_count": 5,
+  "test_ai_count": 5,
+  "test_methodology": "Speaker-Independent Split: Holdout Human Speaker 'speaker_03', Holdout AI Engine 'engine_03'",
+  "warning": null,
+  "metrics": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "roc_auc": 1.0,
+    "accuracy_pct": 100.0,
+    "precision_pct": 100.0,
+    "recall_pct": 100.0,
+    "f1_score_pct": 100.0,
+    "roc_auc_pct": 100.0
+  },
+  "confusion_matrix": {
+    "matrix": [
+      [
+        5,
+        0
+      ],
+      [
+        0,
+        5
+      ]
+    ],
+    "true_negatives_human_as_human": 5,
+    "false_positives_human_as_ai": 0,
+    "false_negatives_ai_as_human": 0,
+    "true_positives_ai_as_ai": 5
+  },
+  "roc_curve": [
+    {
+      "fpr": 0.0,
+      "tpr": 0.0
+    },
+    {
+      "fpr": 0.0,
+      "tpr": 0.2
+    },
+    {
+      "fpr": 0.0,
+      "tpr": 1.0
+    },
+    {
+      "fpr": 1.0,
+      "tpr": 1.0
+    }
+  ],
+  "top_features": [
+    {
+      "rank": 1,
+      "name": "spectral_contrast_band_1_mean",
+      "importance": 0.1106,
+      "percentage": 11.06
+    },
+    {
+      "rank": 2,
+      "name": "mfcc_09_mean",
+      "importance": 0.0952,
+      "percentage": 9.52
+    },
+    {
+      "rank": 3,
+      "name": "mfcc_09_std",
+      "importance": 0.0705,
+      "percentage": 7.05
+    },
+    {
+      "rank": 4,
+      "name": "spectral_contrast_band_1_std",
+      "importance": 0.0655,
+      "percentage": 6.55
+    },
+    {
+      "rank": 5,
+      "name": "mfcc_13_std",
+      "importance": 0.0637,
+      "percentage": 6.37
+    },
+    {
+      "rank": 6,
+      "name": "mfcc_10_std",
+      "importance": 0.061,
+      "percentage": 6.1
+    },
+    {
+      "rank": 7,
+      "name": "mfcc_08_mean",
+      "importance": 0.0506,
+      "percentage": 5.06
+    },
+    {
+      "rank": 8,
+      "name": "f0_std",
+      "importance": 0.0371,
+      "percentage": 3.71
+    },
+    {
+      "rank": 9,
+      "name": "mfcc_11_mean",
+      "importance": 0.0353,
+      "percentage": 3.53
+    },
+    {
+      "rank": 10,
+      "name": "mfcc_12_std",
+      "importance": 0.0315,
+      "percentage": 3.15
+    },
+    {
+      "rank": 11,
+      "name": "f0_range",
+      "importance": 0.0271,
+      "percentage": 2.71
+    },
+    {
+      "rank": 12,
+      "name": "pause_ratio",
+      "importance": 0.0249,
+      "percentage": 2.49
+    },
+    {
+      "rank": 13,
+      "name": "spectral_bandwidth_std",
+      "importance": 0.0228,
+      "percentage": 2.28
+    },
+    {
+      "rank": 14,
+      "name": "spectral_contrast_band_3_mean",
+      "importance": 0.0209,
+      "percentage": 2.09
+    },
+    {
+      "rank": 15,
+      "name": "spectral_rolloff_std",
+      "importance": 0.0182,
+      "percentage": 1.82
+    }
+  ],
+  "generalization_experiment": {
+    "unseen_tested_engine": "engine_03",
+    "training_engines": [
+      "engine_01",
+      "engine_02"
+    ],
+    "test_samples_count": 5,
+    "detected_as_ai_count": 5,
+    "unseen_engine_detection_rate": 100.0,
+    "mean_ai_probability": 72.2,
+    "interpretation": "Trained on 2 AI engine(s) and evaluated on completely unseen 'engine_03'. Successfully flagged 5/5 (100.0%) unseen synthetic recordings as AI."
+  }
+}

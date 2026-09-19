@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}VOICE SENTINEL - Model Specifications & Architecture{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h2 style="font-size: 1.6rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.02em;">Acoustic Architecture & Forensic Specifications</h2>
+  <p style="color: var(--text-muted); font-size: 0.9rem;">Technical overview of signal preprocessing, dimensional feature spaces, mathematical formulations, and operational boundaries.</p>
+</div>
+
+<!-- Architecture Pipeline Visualizer -->
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      End-to-End Processing Pipeline
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; text-align: center; margin-top: 0.5rem;">
+    <div class="feature-box">
+      <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Step 1</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF; margin: 0.35rem 0;">Audio Ingestion</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">Decodes WAV/MP3/WebM, converts to 16 kHz mono, validates duration &gt; 0.4s.</div>
+    </div>
+
+    <div class="feature-box">
+      <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Step 2</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF; margin: 0.35rem 0;">Acoustic Extraction</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">Extracts 88 fixed features spanning MFCC, Mel, STFT, F0, Jitter, Shimmer, HNR, Prosody.</div>
+    </div>
+
+    <div class="feature-box">
+      <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Step 3</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF; margin: 0.35rem 0;">Z-Score Scaling</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">Transforms features using fitted StandardScaler without test-set leakage.</div>
+    </div>
+
+    <div class="feature-box">
+      <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Step 4</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF; margin: 0.35rem 0;">Random Forest</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">100 estimators calculate ensemble decision trees with balanced class weighting.</div>
+    </div>
+
+    <div class="feature-box">
+      <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Step 5</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: var(--accent-cyan); margin: 0.35rem 0;">Forensic Assessment</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">Computes true class probabilities P(AI), P(Human) and decision confidence.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Mathematical Definitions of Acoustic Markers -->
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Acoustic Markers & Biomechanical Principles
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    <div class="feature-box">
+      <h4 style="color: var(--accent-cyan);">1. Jitter (Pitch Period Micro-Perturbation)</h4>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+        Human vocal fold vibration is inherently non-periodic due to biomechanical fluctuations, turbulent mucosal wave dynamics, and neuromuscular noise. Synthetic speech engines often exhibit either unnatural period rigidity or quantized synthetic jitter.
+      </p>
+      <div style="background: #070B14; padding: 0.5rem 0.75rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: #38BDF8;">
+        Jitter(local) = [ 1 / (N - 1) * &Sigma; |T[i] - T[i+1]| ] / [ 1 / N * &Sigma; T[i] ]
+      </div>
+    </div>
+
+    <div class="feature-box">
+      <h4 style="color: var(--accent-cyan);">2. Shimmer (Cycle-to-Cycle Amplitude Variation)</h4>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+        Measures the variability in peak amplitude between adjacent glottal cycles. Reflects glottal closure resistance and transglottal airflow variations.
+      </p>
+      <div style="background: #070B14; padding: 0.5rem 0.75rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: #38BDF8;">
+        Shimmer(local) = [ 1 / (N - 1) * &Sigma; |A[i] - A[i+1]| ] / [ 1 / N * &Sigma; A[i] ]
+      </div>
+    </div>
+
+    <div class="feature-box">
+      <h4 style="color: var(--accent-cyan);">3. Harmonics-to-Noise Ratio (HNR)</h4>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+        Quantifies the proportion of harmonic energy produced by regular vocal fold vibration versus aperiodic turbulent noise generated during aspiration. Computed via harmonic-percussive source separation:
+      </p>
+      <div style="background: #070B14; padding: 0.5rem 0.75rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: #38BDF8;">
+        HNR (dB) = 10 * log10( P_harmonic / P_noise )
+      </div>
+    </div>
+
+    <div class="feature-box">
+      <h4 style="color: var(--accent-cyan);">4. Spectral Contrast & Octave Sub-Bands</h4>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+        Evaluates the energy difference between spectral peaks (harmonics) and valleys across 7 logarithmic frequency bands. Synthetic vocoders often show smoothed spectral valleys or unnatural contrast discontinuities.
+      </p>
+    </div>
+
+    <div class="feature-box">
+      <h4 style="color: var(--accent-cyan);">5. Prosody & Temporal Rhythms</h4>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+        Quantifies vocal dynamics including pitch coefficient of variation (F0 std / F0 mean), voiced frame ratios, and natural breathing pause ratios.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Real-World Limitations & Forensic Integrity -->
+<div class="sentinel-card" style="border-color: rgba(245, 158, 11, 0.4);">
+  <div class="card-header">
+    <div class="card-title" style="color: #FCD34D;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FCD34D" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Operational Boundaries & Forensic Limitations
+    </div>
+  </div>
+
+  <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+    <p style="margin-bottom: 0.75rem;">
+      &bull; <strong>Codec & Compression Degradation:</strong> Telephony networks (GSM/AMR codecs) and VoIP platforms (e.g. WhatsApp, Zoom) heavily downsample and compress speech, discarding high-frequency phase and introducing synthetic-like compression artifacts.
+    </p>
+    <p style="margin-bottom: 0.75rem;">
+      &bull; <strong>Environmental Reverberation:</strong> Hard-walled rooms and cheap laptop microphones distort spectral contrast and lower measured HNR independently of vocal authenticity.
+    </p>
+    <p style="margin-bottom: 0.75rem;">
+      &bull; <strong>Next-Generation Diffusion Vocoders:</strong> Modern diffusion models (such as Audiobox and Voicebox) produce increasingly organic glottal pulses, requiring ongoing dataset retraining with novel generative architectures.
+    </p>
+    <p>
+      &bull; <strong>Forensic Use Standard:</strong> Voice Sentinel outputs probabilistic model confidence rather than infallible proof. Forensic investigators must cross-validate acoustic analysis with metadata, contextual verification, and network provenance.
+    </p>
+  </div>
+</div>
+{% endblock %}

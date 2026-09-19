@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}VOICE SENTINEL - AI-Generated Voice Detection System{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Chart.js for data visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Sentinel Header -->
+  <header class="sentinel-header">
+    <div class="header-container">
+      <a href="/" class="brand-badge">
+        <div class="shield-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>VOICE SENTINEL</h1>
+          <span>AI-POWERED VOICE AUTHENTICITY ANALYSIS</span>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link {% if active_page == 'index' %}active{% endif %}">Analyze File</a></li>
+        <li><a href="/live" class="nav-link {% if active_page == 'live' %}active{% endif %}">Live Mic</a></li>
+        <li><a href="/train" class="nav-link {% if active_page == 'train' %}active{% endif %}">Train Model</a></li>
+        <li><a href="/dataset" class="nav-link {% if active_page == 'dataset' %}active{% endif %}">Dataset</a></li>
+        <li><a href="/evaluation" class="nav-link {% if active_page == 'evaluation' %}active{% endif %}">Evaluation</a></li>
+        <li><a href="/model-info" class="nav-link {% if active_page == 'model_info' %}active{% endif %}">Model Specs</a></li>
+      </ul>
+
+      <!-- Model Status Badge -->
+      <div>
+        {% if model_status == 'TRAINED' %}
+          <span class="model-status-pill status-trained" title="Model trained and operational">
+            <span class="status-dot"></span> MODEL TRAINED (RF)
+          </span>
+        {% else %}
+          <span class="model-status-pill status-untrained" title="Model not trained yet">
+            <span class="status-dot"></span> MODEL NOT TRAINED
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-bottom: 1.5rem;">
+          {% for category, message in messages %}
+            <div style="padding: 0.85rem 1.25rem; border-radius: 8px; font-size: 0.88rem; margin-bottom: 0.5rem; background: {% if category == 'error' %}rgba(244,63,94,0.15){% else %}rgba(16,185,129,0.15){% endif %}; border: 1px solid {% if category == 'error' %}rgba(244,63,94,0.4){% else %}rgba(16,185,129,0.4){% endif %}; color: {% if category == 'error' %}#FB7185{% else %}#34D399{% endif %};">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Sentinel Footer -->
+  <footer class="sentinel-footer">
+    <p><strong>VOICE SENTINEL</strong> &bull; Machine Learning Digital Forensics Engine</p>
+    <p style="margin-top: 0.25rem;">Authenticity assessments are statistical probabilities based on acoustic modeling. Not certified for legal or biometric identity verification.</p>
+  </footer>
+
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

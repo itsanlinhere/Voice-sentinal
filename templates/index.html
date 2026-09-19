@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}VOICE SENTINEL - Audio Forensic Analysis{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h2 style="font-size: 1.6rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.02em;">Acoustic Authenticity Analysis</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Upload a speech recording or select a dataset sample to extract acoustic markers and evaluate authenticity.</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <a href="/live" class="btn btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      Live Microphone
+    </a>
+    <a href="/train" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Train Model
+    </a>
+  </div>
+</div>
+
+<!-- If analysis result is available -->
+{% if result %}
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Forensic Detection Result
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-dim);">
+      File: <strong style="color: var(--text-main);">{{ result.file_name }}</strong> &bull; Duration: {{ result.duration_seconds }}s &bull; Sample Rate: {{ result.sample_rate }} Hz
+    </div>
+  </div>
+
+  <!-- Hidden values for real-time dynamic threshold recalculation -->
+  <input type="hidden" id="analysisAiProbRaw" value="{{ result.ai_probability }}">
+
+  <!-- Main Banner -->
+  <div id="analysisResultBanner" class="result-banner {% if result.prediction == 'AI-GENERATED' %}result-ai{% else %}result-human{% endif %}">
+    <div>
+      <div class="prediction-label">MODEL CLASSIFICATION (RANDOM FOREST)</div>
+      <div id="analysisPredictionValue" class="prediction-value {% if result.prediction == 'AI-GENERATED' %}val-ai{% else %}val-human{% endif %}">
+        {{ result.prediction }}
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; max-width: 480px;">
+        {{ result.decision_rationale }}
+      </p>
+    </div>
+
+    <!-- Probability Meters -->
+    <div class="prob-meter-group">
+      <div>
+        <div class="prob-row">
+          <span style="color: var(--color-human);">Human Likelihood</span>
+          <span style="color: var(--color-human);">{{ result.human_probability }}%</span>
+        </div>
+        <div class="prob-track">
+          <div class="prob-fill-human" style="width: {{ result.human_probability }}%;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="prob-row">
+          <span style="color: var(--color-ai);">AI Synthesis Likelihood</span>
+          <span style="color: var(--color-ai);">{{ result.ai_probability }}%</span>
+        </div>
+        <div class="prob-track">
+          <div class="prob-fill-ai" style="width: {{ result.ai_probability }}%;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.2rem;">
+        <span>Model Confidence: <strong>{{ result.confidence }}%</strong></span>
+        <span>Threshold: <strong id="thresholdValueDisplay">{{ (result.threshold_used * 100)|round|int }}%</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Threshold Adjustment Slider -->
+  <div style="background: #0B1120; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <div style="font-size: 0.85rem; font-weight: 600; color: #FFFFFF;">Interactive Decision Threshold</div>
+      <div style="font-size: 0.75rem; color: var(--text-dim);">Adjust cutoff to simulate high-security (low AI tolerance) vs high-convenience policies.</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1rem; min-width: 280px;">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Strict (20%)</span>
+      <input type="range" id="thresholdSlider" min="0.1" max="0.9" step="0.05" value="{{ result.threshold_used }}" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Lenient (80%)</span>
+    </div>
+  </div>
+
+  <!-- Audio Player preview -->
+  {% if result.audio_url %}
+  <div style="margin-bottom: 1.5rem; background: #0B1120; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 1rem;">
+    <span style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">Audio Recording:</span>
+    <audio controls src="{{ result.audio_url }}" style="width: 100%; height: 36px;"></audio>
+  </div>
+  {% endif %}
+
+  <!-- Acoustic Visualizations Row -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+    <!-- Waveform Canvas -->
+    <div class="feature-box">
+      <h4>
+        <span>Audio Waveform</span>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">Time Domain</span>
+      </h4>
+      <div style="height: 160px; position: relative;">
+        <canvas id="waveformChartCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Pitch F0 Contour Chart -->
+    <div class="feature-box">
+      <h4>
+        <span>Pitch (F0) Contour</span>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">pYIN Tracking</span>
+      </h4>
+      <div style="height: 160px; position: relative;">
+        <canvas id="pitchChartCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Mel Spectrogram Heatmap -->
+    <div class="feature-box" style="grid-column: 1 / -1;">
+      <h4>
+        <span>Log Mel Spectrogram</span>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">Frequency Sub-Bands (0 - 8000 Hz)</span>
+      </h4>
+      <div style="height: 180px; position: relative; background: #070B14; border-radius: 6px; overflow: hidden; margin-top: 0.5rem;">
+        <canvas id="melSpectrogramCanvas" style="width: 100%; height: 100%;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acoustic Feature Extraction Breakdown -->
+  <div class="card-header" style="margin-top: 2rem;">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Acoustic Features Extracted From Signal
+    </div>
+    <div style="font-size: 0.8rem; color: var(--text-dim);">88 Fixed Dimensional Features</div>
+  </div>
+
+  <div class="feature-grid">
+    {% for category, details in result.acoustic_features.items() %}
+    <div class="feature-box">
+      <h4>
+        <span>{{ details.title }}</span>
+      </h4>
+      <div class="feature-desc">{{ details.description }}</div>
+      <div class="feature-metric">{{ details.summary }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Top Contributing Random Forest Features -->
+  {% if result.top_contributing_features %}
+  <div class="card-header" style="margin-top: 2rem;">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Top Contributing Model Features For This Analysis
+    </div>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Acoustic Marker</th>
+          <th>Model Importance (Gini)</th>
+          <th>Measured Value in Audio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for feat in result.top_contributing_features %}
+        <tr>
+          <td>#{{ feat.rank }}</td>
+          <td><code>{{ feat.name }}</code></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div style="width: 80px; height: 6px; background: #1E293B; border-radius: 3px; overflow: hidden;">
+                <div style="height: 100%; width: {{ feat.importance_pct * 3 }}%; background: var(--accent-cyan);"></div>
+              </div>
+              <span>{{ feat.importance_pct }}%</span>
+            </div>
+          </td>
+          <td><code>{{ feat.measured_value }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Scientific Disclaimer -->
+  <div class="disclaimer-banner">
+    <strong>Forensic Notice:</strong> {{ result.scientific_disclaimer }}
+  </div>
+</div>
+{% endif %}
+
+<!-- Audio Upload & Analysis Trigger Form -->
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload Audio For Analysis
+    </div>
+    <span style="font-size: 0.8rem; color: var(--text-dim);">Supported: WAV, MP3, M4A, OGG, WebM (Max 25MB)</span>
+  </div>
+
+  <form id="analyzeUploadForm" action="/analyze" method="POST" enctype="multipart/form-data">
+    <input type="file" id="audioFileInput" name="audio_file" accept=".wav,.mp3,.m4a,.ogg,.webm,audio/*" style="display: none;">
+
+    <div id="audioDropzone" class="dropzone-box">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="1.8" style="margin-bottom: 0.75rem;">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <div style="font-size: 1rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.25rem;">
+        Click to browse or drag & drop audio recording
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Voice Sentinel will preprocess, resample to 16 kHz mono, and extract acoustic markers.
+      </div>
+      <div id="selectedFileName" style="margin-top: 0.75rem; font-size: 0.88rem; font-weight: 600; color: var(--accent-cyan);"></div>
+    </div>
+
+    <!-- Audio Player preview when selected -->
+    <div id="audioPlayerContainer" style="display: none; margin-top: 1rem; background: #0B1120; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.75rem 1rem;">
+      <audio id="audioPlayerPreview" controls style="width: 100%; height: 36px;"></audio>
+    </div>
+
+    <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+      <button type="submit" id="btnSubmitAnalyze" class="btn btn-primary" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Execute Forensic Analysis
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Quick Test Preset Samples From Existing Dataset -->
+<div class="sentinel-card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Quick Test: Analyze Labeled Samples From Dataset
+    </div>
+    <span style="font-size: 0.8rem; color: var(--text-dim);">One-click instant analysis</span>
+  </div>
+
+  <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+    Test the trained classifier immediately using recordings from the verified dataset:
+  </p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+    <!-- Human Samples -->
+    <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 0.82rem; font-weight: 700; color: var(--color-human); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+        Human Voice Recordings
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <form action="/analyze" method="POST">
+          <input type="hidden" name="sample_preset" value="dataset/human/speaker_01/human_spk1_sample_01.wav">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem;">
+            <span>Speaker 01 (Natural Female Intonation)</span>
+            <span style="color: var(--color-human);">Test &rarr;</span>
+          </button>
+        </form>
+
+        <form action="/analyze" method="POST">
+          <input type="hidden" name="sample_preset" value="dataset/human/speaker_02/human_spk2_sample_01.wav">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem;">
+            <span>Speaker 02 (Natural Male Register)</span>
+            <span style="color: var(--color-human);">Test &rarr;</span>
+          </button>
+        </form>
+
+        <form action="/analyze" method="POST">
+          <input type="hidden" name="sample_preset" value="dataset/human/speaker_03/human_spk3_sample_01.wav">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem;">
+            <span>Speaker 03 (Conversational Dynamics)</span>
+            <span style="color: var(--color-human);">Test &rarr;</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- AI Samples -->
+    <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 8px; padding: 1rem;">
+      <div style="font-size: 0.82rem; font-weight: 700; color: var(--color-ai); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+        AI-Generated Audio Profiles
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <form action="/analyze" method="POST">
+          <input type="hidden" name="sample_preset" value="dataset/ai/engine_01/synth_eng1_sample_01.wav">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem;">
+            <span>Engine 01 (Formant Synthesis Rigidity)</span>
+            <span style="color: var(--color-ai);">Test &rarr;</span>
+          </button>
+        </form>
+
+        <form action="/analyze" method="POST">
+          <input type="hidden" name="sample_preset" value="dataset/ai/engine_02/synth_eng2_sample_01.wav">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem;">
+            <span>Engine 02 (Vocoded Neural Speech)</span>
+            <span style="color: var(--color-ai);">Test &rarr;</span>
+          </button>
+        </form>
+
+        <form action="/analyze" method="POST">
+          <input type="hidden" name="sample_preset" value="dataset/ai/engine_03/synth_eng3_sample_01.wav">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem;">
+            <span>Engine 03 (Deep Monotone Synthetic)</span>
+            <span style="color: var(--color-ai);">Test &rarr;</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if result and result.visual_data %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const waveData = {{ result.visual_data.waveform | tojson }};
+    const pitchData = {{ result.visual_data.pitch_contour | tojson }};
+    const melGrid = {{ result.visual_data.mel_grid | tojson }};
+
+    if (waveData && waveData.length > 0) {
+      renderWaveform('waveformChartCanvas', waveData);
+    }
+    if (pitchData && pitchData.length > 0) {
+      renderPitchContour('pitchChartCanvas', pitchData);
+    }
+    if (melGrid && melGrid.length > 0) {
+      renderMelSpectrogram('melSpectrogramCanvas', melGrid);
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}
